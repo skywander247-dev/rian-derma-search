@@ -29,6 +29,7 @@
     .card.shelf-desk { border-left-color: #f59e0b; }
     .card.shelf-cabinet { border-left-color: #6366f1; }
     .card.shelf-bulk { border-left-color: #ec4899; }
+    .card.exact-match { border: 2px solid #0f766e; border-left: 8px solid #0f766e; background-color: #fafffe; }
     
     .card-top { display: flex; justify-content: space-between; align-items: center; }
     .shelf-badge { background: #ccfbf1; color: #0f766e; font-size: 1.15rem; font-weight: 800; padding: 4px 12px; border-radius: 8px; letter-spacing: 0.5px; }
@@ -69,7 +70,7 @@
   <div id="cardList" class="card-list"></div>
 
   <script>
-    // 嚴格對照《日安皮膚科藥品儲位.xlsx》真實資料，並將所有藥代強制轉為字串
+    // 嚴格完整寫入《日安皮膚科藥品儲位.xlsx》的真實 119 筆資料
     const DRUG_DATA = [
       {"儲位": "調1-5", "藥代": "FEX1", "名稱": "fexofenadine 60mg"},
       {"儲位": "調1-5", "藥代": "FEX2", "名稱": "fexofenadine 180mg"},
@@ -92,98 +93,104 @@
       {"儲位": "調1-6", "藥代": "AMO", "名稱": "amoxicillin 250mg"},
       {"儲位": "調1-6", "藥代": "AUG", "名稱": "augmentin 625mg"},
       {"儲位": "調1-6", "藥代": "CIP", "名稱": "ciprofloxacin 250mg"},
-      {"儲位": "調1-6", "藥代": "GRI", "名稱": "griseofulvin 125mg"},
-      {"儲位": "調1-6", "藥代": "CLI", "名稱": "cleocin 150mg"},
-      {"儲位": "調1-6", "藥代": "ICOMEIN", "名稱": "icomein 100mg"},
-      {"儲位": "調1-6", "藥代": "FLU", "名稱": "fluconazole 50mg"},
+      {"儲位": "調1-6", "藥代": "GRI", "名稱": "griseofulvin 500mg"},
+      {"儲位": "調1-6", "藥代": "CLI", "名稱": "clindamycin 300mg"},
+      {"儲位": "調1-6", "藥代": "ICOMEIN", "名稱": "itraconazole 100mg"},
+      {"儲位": "調1-6", "藥代": "FLU", "名稱": "fluconazole 150mg"},
       {"儲位": "調1-6", "藥代": "TER", "名稱": "terbinafine 250mg"},
-      {"儲位": "調1-6", "藥代": "ACY2", "名稱": "acyclovir 400mg"},
-      {"儲位": "調1-6", "藥代": "VAL", "名稱": "valacyclovir 500mg"},
+      {"儲位": "散裝區", "藥代": "ACY2", "名稱": "acyclovir 800mg"},
+      {"儲位": "調1-6", "藥代": "VAL", "名稱": "valtrex 500mg"},
       {"儲位": "調1-6", "藥代": "IVER", "名稱": "ivermectin 3mg"},
       {"儲位": "調2-1", "藥代": "a10", "名稱": "clobetasol oint倍可舒軟膏"},
       {"儲位": "調2-1", "藥代": "A10", "名稱": "clobetasol oint倍可舒軟膏"},
       {"儲位": "調2-1", "藥代": "A11", "名稱": "clobetasol cream倍達舒乳膏"},
       {"儲位": "調2-1", "藥代": "A12", "名稱": "clobetasol cream可立舒乳膏(涼)"},
-      {"儲位": "調2-1", "藥代": "A14", "名稱": "betamethasone cream貝他每松軟膏"},
-      {"儲位": "調2-1", "藥代": "A16", "名稱": "betamethasone oint安膚軟膏"},
-      {"儲位": "調2-1", "藥代": "A17", "名稱": "mometasone cream莫美他松乳膏"},
-      {"儲位": "調2-1", "藥代": "A18", "名稱": "desoximetasone cream可德松乳膏"},
+      {"儲位": "調2-1", "藥代": "A14", "名稱": "BD cream+genta甘德松軟膏"},
+      {"儲位": "調2-1", "藥代": "A16", "名稱": "BV cream貝他每松軟膏"},
+      {"儲位": "調2-1", "藥代": "A17", "名稱": "momentasone安膚樂乳膏"},
+      {"儲位": "調2-1", "藥代": "a17", "名稱": "momentasone安膚樂乳膏"},
+      {"儲位": "調2-1", "藥代": "A18", "名稱": "BV cream+genta美加健乳膏"},
       {"儲位": "調2-1", "藥代": "A19", "名稱": "clobetasol butyrate捷舒乳膏"},
-      {"儲位": "調2-1", "藥代": "A30", "名稱": "hydrocortisone acetate cream可的松乳膏"},
-      {"儲位": "調2-1", "藥代": "A31", "名稱": "hydrocortisone butyrate cream普樂治乳膏"},
-      {"儲位": "調2-1", "藥代": "A32", "名稱": "desonide lotion帝舒寧水性洗劑"},
-      {"儲位": "調2-1", "藥代": "A33", "名稱": "fluticasone cream服美淨乳膏"},
+      {"儲位": "調2-3", "藥代": "A30", "名稱": "butanafine cream黴可舒乳膏1%"},
+      {"儲位": "調2-3", "藥代": "A31", "名稱": "ketoconazole cream潔得爽乳膏"},
+      {"儲位": "調2-3", "藥代": "A32", "名稱": "econazole+triamcinolone易可舒乳膏"},
+      {"儲位": "調2-3", "藥代": "A33", "名稱": "Econazole炎可治乳膏"},
       {"儲位": "調2-3", "藥代": "A40", "名稱": "Fusidic acid cream褐黴素乳膏"},
       {"儲位": "調2-3", "藥代": "a40", "名稱": "Fusidic acid cream褐黴素乳膏"},
-      {"儲位": "調2-3", "藥代": "A41", "名稱": "Gentamicin cream根達黴素乳膏"},
-      {"儲位": "調2-3", "藥代": "AA41", "名稱": "Gentamicin cream根達黴素乳膏"},
-      {"儲位": "調2-3", "藥代": "A16S", "名稱": "Sinbaby baby lotion金貝比嬰兒擦劑"},
-      {"儲位": "調2-2", "藥代": "A20", "名稱": "zinc oxide 20% ointment氧化鋅軟膏"},
-      {"儲位": "調2-2", "藥代": "A21", "名稱": "urea 20% cream尿素乳膏"},
-      {"儲位": "調2-2", "藥代": "A22", "名稱": "tretinoin 0.05% cream蕾婷乳膏"},
-      {"儲位": "調2-2", "藥代": "A23", "名稱": "salicylic acid 5% ointment水楊酸軟膏"},
-      {"儲位": "調2-2", "藥代": "A53", "名稱": "calamine lotion痱子水"},
-      {"儲位": "調2-2", "藥代": "A77", "名稱": "whitfield ointment懷特軟膏"},
-      {"儲位": "調2-2", "藥代": "BECA", "名稱": "becaplermin gel貝卡普勒明凝膠"},
-      {"儲位": "調2-4", "藥代": "AUGS", "名稱": "augmentin syrup安augmentin糖漿"},
-      {"儲位": "調2-4", "藥代": "ACES", "名稱": "anti-phen syrup安滅糖漿"},
-      {"儲位": "調2-4", "藥代": "ACY2", "名稱": "acyclovir syr祛疹易"},
-      {"儲位": "調3-4", "藥代": "AA61", "名稱": "soolantra舒利達"},
-      {"儲位": "調3-4", "藥代": "A22C", "名稱": "adaplene痘膚潤乳膏0.1%"},
-      {"儲位": "調3-4", "藥代": "A25", "名稱": "adaolene and benzoyl peroxide醫皮痘0.3%"},
-      {"儲位": "調3-4", "藥代": "A26", "名稱": "trifarotene 50mcg/g艾克痘乳膏"},
-      {"儲位": "調3-4", "藥代": "TAC", "名稱": "tacroli達可麗軟膏"},
-      {"儲位": "櫃1-5", "藥代": "AA11", "名稱": "cleosol cream克立舒乳膏"},
-      {"儲位": "櫃1-5", "藥代": "AA12", "名稱": "cleosol cream克立舒乳膏(涼)"},
-      {"儲位": "櫃1-5", "藥代": "AA15", "名稱": "balinse ointment倍麗絲軟膏"},
-      {"儲位": "櫃1-5", "藥代": "AA20", "名稱": "gchyndacin gel去痘素凝膠"},
-      {"儲位": "櫃1-5", "藥代": "AA34", "名稱": "trisec cream倍克健乳膏"},
-      {"儲位": "櫃1-5", "藥代": "AA52", "名稱": "sinpharderm DE cream杏化潤愛麗霜乳膏"},
-      {"儲位": "櫃1-5", "藥代": "AA53", "名稱": "U soft cream優倍滋乳膏"},
-      {"儲位": "櫃1-5", "藥代": "AA42", "名稱": "silva sulfa 1% cream銀磺胺乳膏"},
-      {"儲位": "櫃1-1", "藥代": "PRO", "名稱": "prosela泰達利"},
-      {"儲位": "櫃1-1", "藥代": "FIN", "名稱": "finjuve紛永維噴液"},
-      {"儲位": "調3-5", "藥代": "75", "名稱": "minoxidil 5%凱蕾生髮液"},
-      {"儲位": "調3-5", "藥代": "11", "名稱": "clobetasol cream倍絡宜乳膏(分裝圓罐)"},
-      {"儲位": "調3-5", "藥代": "12", "名稱": "clobetasol cream(涼薄荷)倍絡宜乳膏(分裝圓罐)"},
-      {"儲位": "調3-5", "藥代": "15", "名稱": "mupirocin ointment莫匹羅星軟膏(分裝圓罐)"},
-      {"儲位": "調3-5", "藥代": "20", "名稱": "erythromycin gel紅黴素凝膠(分裝圓罐)"},
-      {"儲位": "調3-5", "藥代": "34", "名稱": "ketoconazole cream酮康唑乳膏(分裝圓罐)"},
-      {"儲位": "調3-5", "藥代": "40", "名稱": "fusidic acid cream褐黴素乳膏(分裝圓罐)"},
-      {"儲位": "調3-5", "藥代": "52", "名稱": "urea cream尿素乳膏(分裝圓罐)"},
-      {"儲位": "調3-6", "藥代": "CEF", "名稱": "預包BID6/BID10/BID14"},
-      {"儲位": "調3-6", "藥代": "AMO", "名稱": "預包TID3/QID3"},
-      {"儲位": "調3-6", "藥代": "AUG", "名稱": "預包BID6/BID10/BID14"},
-      {"儲位": "調3-6", "藥代": "CIP", "名稱": "預包BID6/BID10/BID14"},
-      {"儲位": "調3-6", "藥代": "CLI", "名稱": "預包BID6/BID10/BID14"},
-      {"儲位": "調3-6", "藥代": "ACY2", "名稱": "預包5"},
-      {"儲位": "調3-6", "藥代": "VAL", "名稱": "預包3"},
-      {"儲位": "調3-6", "藥代": "ICOMEIN", "名稱": "預包QN7"},
-      {"儲位": "調4-1", "藥代": "DOX", "名稱": "預包BID6/BID10/BID14"},
-      {"儲位": "調4-1", "藥代": "DEX", "名稱": "預包QOD4"},
-      {"儲位": "調4-1", "藥代": "GRI", "名稱": "預包BID14"},
-      {"儲位": "調4-2", "藥代": "FLU", "名稱": "預包QW1/QW2/QW4"},
-      {"儲位": "調4-2", "藥代": "IVER", "名稱": "預包1"},
+      {"儲位": "調2-3", "藥代": "A41", "名稱": "gentamicin cream紫菌素乳膏"},
+      {"儲位": "調2-3", "藥代": "AA41", "名稱": "gentamicin cream紫菌素乳膏"},
+      {"儲位": "調2-3", "藥代": "a43", "名稱": "neobacin oph oint紐安必新眼軟膏"},
+      {"儲位": "調2-2", "藥代": "A16S", "名稱": "BV cream貝他每松軟膏(清涼)"},
+      {"儲位": "調2-2", "藥代": "A20", "名稱": "clindamycin gel樂淨凝膠"},
+      {"儲位": "調2-2", "藥代": "A21", "名稱": "metronidazole gel益膚康凝膠"},
+      {"儲位": "調2-2", "藥代": "a22", "名稱": "Differin gel蒂膚麗凝膠(小a)"},
+      {"儲位": "調2-2", "藥代": "A22", "名稱": "Differin gel蒂膚麗凝膠(大A)"},
+      {"儲位": "調2-2", "藥代": "a23", "名稱": "azelaic acid使痘消乳膏(小a)"},
+      {"儲位": "調2-2", "藥代": "A23", "名稱": "azelaic acid使痘消乳膏(大A)"},
+      {"儲位": "調2-4", "藥代": "a50", "名稱": "cortibond orabase口得安口內膏(藍)"},
+      {"儲位": "調2-4", "藥代": "a501", "名稱": "zinc orabase親平口內膏(粉紅)"},
+      {"儲位": "調2-4", "藥代": "a51", "名稱": "acyclovir cream安斯特乳膏"},
+      {"儲位": "調2-4", "藥代": "a55", "名稱": "cividoid喜美凝膠"},
+      {"儲位": "調2-4", "藥代": "A53", "名稱": "sinpharderm優倍滋乳膏"},
+      {"儲位": "調2-4", "藥代": "A77", "名稱": "雅佛麗露嫩白霜4%"},
+      {"儲位": "櫃1-5", "藥代": "traceton", "名稱": "traceton服安痛"},
+      {"儲位": "櫃1-1", "藥代": "ISO4", "名稱": "isotretinoin 20mg(綠盒)"},
+      {"儲位": "櫃1-1", "藥代": "ISO5", "名稱": "isotretinoin 10mg(紅盒)"},
+      {"儲位": "調3-4", "藥代": "BECA", "名稱": "becanex無花乾癬"},
+      {"儲位": "調3-5", "藥代": "AUGS", "名稱": "augmentin雙合黴素糖漿粉劑"},
+      {"儲位": "調3-5", "藥代": "CEFS", "名稱": "ulexin優力黴素口服懸液粉劑"},
+      {"儲位": "調3-5", "藥代": "ACES", "名稱": "acetaminophen普挪痛藥水"},
+      {"儲位": "調3-5", "藥代": "CYPS", "名稱": "cyproheptadine敏可停液糖漿"},
+      {"儲位": "調3-5", "藥代": "IBUS", "名稱": "ibuprofen速克熱痛口服懸液"},
+      {"儲位": "調3-5", "藥代": "PRES30", "名稱": "prednisolone syrup必爾生口服液(小)"},
+      {"儲位": "調3-5", "藥代": "CETS60", "名稱": "cetirizine勝克敏液(大)"},
+      {"儲位": "調3-5", "藥代": "PRES", "名稱": "prednisolone syrup必爾生口服液(大)"},
+      {"儲位": "調3-5", "藥代": "CETS", "名稱": "cetirizine杏止敏液(小)"},
+      {"儲位": "調3-6", "藥代": "FIN1", "名稱": "finasteride 1mg"},
+      {"儲位": "調3-6", "藥代": "FIN5", "名稱": "finasteride 5mg"},
+      {"儲位": "調3-6", "藥代": "DUT", "名稱": "dutasteride得妥舒以盒計價"},
+      {"儲位": "調3-6", "藥代": "FUP", "名稱": "fuprostate護腺寧"},
+      {"儲位": "調3-6", "藥代": "SPI1", "名稱": "spironolactone"},
+      {"儲位": "調3-6", "藥代": "75", "名稱": "minoxidil 5%凱蕾生髮液"},
+      {"儲位": "調3-6", "藥代": "SH36", "名稱": "清爽洗髮精200mL"},
+      {"儲位": "調3-6", "藥代": "76", "名稱": "日安舒緩噴霧"},
+      {"儲位": "調4-1", "藥代": "11", "名稱": "clobetasol cream倍絡宜乳膏(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "12", "名稱": "clobetasol cream(涼薄荷)倍絡宜乳膏(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "14", "名稱": "BD cream+genta甘德松親水軟膏(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "16", "名稱": "BV cream貝他每松親水性軟膏(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "18", "名稱": "BV cream+genta(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "24", "名稱": "BPO麗康凝膠(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "31", "名稱": "ketoconazole cream潔得爽乳膏(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "32", "名稱": "econazole+triamcinolone易可舒乳膏(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "42", "名稱": "siliverzine cream銀磺胺乳膏(分裝圓罐)"},
+      {"儲位": "調4-1", "藥代": "36", "名稱": "清爽洗髮精"},
+      {"儲位": "調4-1", "藥代": "S16", "名稱": "BV solution皮爽"},
+      {"儲位": "調4-1", "藥代": "S20", "名稱": "clindamycin solution樂無痘除痘水"},
+      {"儲位": "調4-1", "藥代": "58", "名稱": "jaline利蝨"},
+      {"儲位": "調4-1", "藥代": "S34", "名稱": "amocoat nail lacquer雅舒安抗甲癬油劑"},
+      {"儲位": "調4-1", "藥代": "timolol", "名稱": "timolol"},
+      {"儲位": "調4-1", "藥代": "gentamicin eye drops", "名稱": "gentamicin eye drops"},
+      {"儲位": "調4-1", "藥代": "duofilm", "名稱": "duofilm治疣液"},
       {"儲位": "調4-2", "藥代": "CEF", "名稱": "預包QN7/BID6/BID10/BID14"},
       {"儲位": "調4-2", "藥代": "DOX", "名稱": "預包QN7/BID14"},
       {"儲位": "調4-2", "藥代": "DEX", "名稱": "預包QOD4"},
       {"儲位": "調4-2", "藥代": "ACY2", "名稱": "預包5"},
       {"儲位": "調4-2", "藥代": "CLI", "名稱": "預包7"},
-      {"儲位": "桌面右", "藥代": "AA61", "名稱": "soolantra舒利達"},
-      {"儲位": "桌面右", "藥代": "A22C", "名稱": "adaplene痘膚潤乳膏0.1%"},
-      {"儲位": "桌面右", "藥代": "A25", "名稱": "adaolene and benzoyl peroxide醫皮痘0.3%"},
-      {"儲位": "桌面右", "藥代": "A26", "名稱": "trifarotene 50mcg/g艾克痘乳膏"},
-      {"儲位": "桌面右", "藥代": "TAC", "名稱": "tacroli達可麗軟膏"},
-      {"儲位": "調1-3(左)(原箱內)", "藥代": "AA11", "名稱": "cleosol cream克立舒乳膏"},
-      {"儲位": "調1-3(左)(原箱內)", "藥代": "AA12", "名稱": "cleosol cream克立舒乳膏(涼)"},
-      {"儲位": "調1-3(左)(原箱內)", "藥代": "AA15", "名稱": "balinse ointment倍麗絲軟膏"},
-      {"儲位": "調1-3(左)(原箱內)", "藥代": "AA20", "名稱": "gchyndacin gel去痘素凝膠"},
-      {"儲位": "調1-3(左)(原箱內)", "藥代": "AA34", "名稱": "trisec cream倍克健乳膏"},
-      {"儲位": "調1-3(左)(原箱內)", "藥代": "AA52", "名稱": "sinpharderm DE cream杏化潤愛麗霜乳膏"},
-      {"儲位": "調1-3(左)(原箱內)", "藥代": "AA53", "名稱": "U soft cream優倍滋乳膏"},
-      {"儲位": "櫃1-4", "藥代": "AA42", "名稱": "silva sulfa 1% cream銀磺胺乳膏"},
-      {"儲位": "調3-4", "藥代": "PRO", "名稱": "prosela泰達利"},
-      {"儲位": "散裝區", "藥代": "FIN", "名稱": "finjuve紛永維噴液"}
+      {"儲位": "調4-2", "藥代": "AA61", "名稱": "soolantra舒利達"},
+      {"儲位": "調4-2", "藥代": "A22C", "名稱": "adaplene痘膚潤乳膏0.1%"},
+      {"儲位": "調4-2", "藥代": "A25", "名稱": "adaolene and benzoyl peroxide醫皮痘0.3%"},
+      {"儲位": "調4-2", "藥代": "A26", "名稱": "trifarotene 50mcg/g艾克痘乳膏"},
+      {"儲位": "調4-2", "藥代": "TAC", "名稱": "tacroli達可麗軟膏"},
+      {"儲位": "桌面右", "藥代": "AA11", "名稱": "cleosol cream克立舒乳膏"},
+      {"儲位": "桌面右", "藥代": "AA12", "名稱": "cleosol cream克立舒乳膏(涼)"},
+      {"儲位": "桌面右", "藥代": "AA15", "名稱": "balinse ointment倍麗絲軟膏"},
+      {"儲位": "桌面右", "藥代": "AA20", "名稱": "gchyndacin gel去痘素凝膠"},
+      {"儲位": "桌面右", "藥代": "AA34", "名稱": "trisec cream倍克健乳膏"},
+      {"儲位": "桌面右", "藥代": "AA52", "名稱": "sinpharderm DE cream杏化潤愛麗霜乳膏"},
+      {"儲位": "桌面右", "藥代": "AA53", "名稱": "U soft cream優倍滋乳膏"},
+      {"儲位": "調1-3(左)(原箱內)", "藥代": "AA42", "名稱": "silva sulfa 1% cream銀磺胺乳膏"},
+      {"儲位": "櫃1-4", "藥代": "PRO", "名稱": "prosela泰達利"},
+      {"儲位": "調3-4", "藥代": "FIN", "名稱": "finjuve紛永維噴液"}
     ];
 
     const searchInput = document.getElementById('searchInput');
@@ -193,7 +200,7 @@
     const cardList = document.getElementById('cardList');
     const resultCount = document.getElementById('resultCount');
 
-    function renderList(items) {
+    function renderList(items, exactCode = null) {
       cardList.innerHTML = '';
       resultCount.textContent = `搜尋結果：${items.length} 筆`;
 
@@ -220,6 +227,11 @@
         } else if (shelf.includes('散裝')) {
           cardTypeClass = 'shelf-bulk';
           badgeTypeClass = 'bulk-badge';
+        }
+
+        const isExact = (exactCode && String(item['藥代']) === String(exactCode));
+        if (isExact) {
+          cardTypeClass += ' exact-match';
         }
 
         const card = document.createElement('div');
@@ -252,12 +264,11 @@
       const exactCodeMatches = DRUG_DATA.filter(item => String(item['藥代']) === q);
       if (exactCodeMatches.length > 0) {
         // 如果有完全命中的藥代，就「只」回傳這個藥代，不查名稱
-        renderList(exactCodeMatches);
+        renderList(exactCodeMatches, q);
         return;
       }
 
       // 【過濾邏輯 2】：判斷使用者是否正在輸入藥代（前綴相同，嚴格區分大小寫）
-      // 假設使用者打算查 A40，剛輸入 A 時，只會帶出 A 開頭的藥代
       const prefixCodeMatches = DRUG_DATA.filter(item => String(item['藥代']).startsWith(q));
       if (prefixCodeMatches.length > 0) {
         renderList(prefixCodeMatches);
