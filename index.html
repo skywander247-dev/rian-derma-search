@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>日安皮膚科藥品儲位查詢系統</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0d9488">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: #f0fdfa; color: #134e4a; padding-bottom: 40px; }
+    .header { background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; padding: 18px 16px; text-align: center; position: sticky; top: 0; z-index: 50; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px; }
+    .header p { font-size: 0.8rem; opacity: 0.92; margin-top: 4px; }
+    
+    .search-bar-container { position: sticky; top: 68px; z-index: 40; background: #f0fdfa; padding: 12px 16px 8px; }
+    .search-box { display: flex; align-items: center; background: white; border-radius: 12px; padding: 6px 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.06); border: 1.5px solid #99f6e4; }
+    .search-box:focus-within { border-color: #0d9488; }
+    .search-input { flex: 1; border: none; outline: none; font-size: 1rem; padding: 6px 8px; color: #134e4a; }
+    .icon-btn { background: none; border: none; outline: none; cursor: pointer; padding: 6px 8px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .mic-btn { background-color: #ccfbf1; color: #0f766e; margin-left: 6px; }
+    .mic-btn.listening { background-color: #ef4444; color: white; animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+    
+    .stats-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px; font-size: 0.82rem; color: #115e59; }
+    .card-list { padding: 8px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .card { background: white; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-left: 5px solid #0d9488; display: flex; flex-direction: column; gap: 6px; }
+    .card.shelf-desk { border-left-color: #f59e0b; }
+    .card.shelf-cabinet { border-left-color: #6366f1; }
+    .card.shelf-bulk { border-left-color: #ec4899; }
+    
+    .card-top { display: flex; justify-content: space-between; align-items: baseline; }
+    .shelf-badge { background: #ccfbf1; color: #0f766e; font-size: 1.1rem; font-weight: 800; padding: 3px 10px; border-radius: 8px; letter-spacing: 0.5px; }
+    .shelf-badge.desk-badge { background: #fef3c7; color: #b45309; }
+    .shelf-badge.cabinet-badge { background: #e0e7ff; color: #4338ca; }
+    .shelf-badge.bulk-badge { background: #fce7f3; color: #be185d; }
+    
+    .code-tags { display: flex; gap: 6px; font-size: 0.78rem; font-weight: 600; }
+    .tag-med { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; padding: 2px 6px; border-radius: 4px; }
+    
+    .drug-name-main { font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-top: 2px; line-height: 1.4; }
+    
+    .empty-state { text-align: center; padding: 40px 20px; color: #99f6e4; }
+    .speech-status { text-align: center; font-size: 0.82rem; color: #ef4444; font-weight: 600; min-height: 18px; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>日安皮膚科藥品儲位系統</h1>
+    <p>支援語音辨識與關鍵字即時比對</p>
+  </div>
+
+  <div class="search-bar-container">
+    <div class="search-box">
+      <input type="text" id="searchInput" class="search-input" placeholder="輸入藥名(如優倍滋)、藥代(如FEX1)、儲位..." autocomplete="off">
+      <button id="clearBtn" class="icon-btn" style="display:none; color:#94a3b8;">✕</button>
+      <button id="micBtn" class="icon-btn mic-btn" title="語音輸入">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+      </button>
+    </div>
+    <div id="speechStatus" class="speech-status"></div>
+  </div>
+
+  <div class="stats-bar">
+    <span id="resultCount">共 119 筆藥品</span>
+    <span>調劑台 / 櫃位 / 桌面皆可查</span>
+  </div>
+
+  <div id="cardList" class="card-list"></div>
+
+  <script>
+    const DRUG_DATA = [
+      {"儲位":"調1-5","藥代":"FEX1","名稱":"fexofenadine 60mg"},
+      {"儲位":"調1-5","藥代":"FEX2","名稱":"fexofenadine 180mg"},
+      {"儲位":"調1-5","藥代":"LEV","名稱":"levocetirizine 5mg"},
+      {"儲位":"調1-5","藥代":"CET","名稱":"cetirizine 10mg"},
+      {"儲位":"調1-5","藥代":"DEX","名稱":"dexamethasone"},
+      {"儲位":"調1-5","藥代":"ZIN","名稱":"zinc gluconate"},
+      {"儲位":"調1-5","藥代":"VOR1","名稱":"diclofenac 25mg"},
+      {"儲位":"調1-5","藥代":"VOR2","名稱":"diclofenac 50mg"},
+      {"儲位":"調1-5","藥代":"FAM","名稱":"famotidine 20mg"},
+      {"儲位":"調1-5","藥代":"WET","名稱":"wetulin"},
+      {"儲位":"調1-6","藥代":"MED","名稱":"prednisolone 5mg"},
+      {"儲位":"調1-6","藥代":"TRA","名稱":"tranexamic acid 250mg"},
+      {"儲位":"調1-6","藥代":"MEQ","名稱":"mequitazine 5mg"},
+      {"儲位":"調1-6","藥代":"LOR","名稱":"loratadine 10mg"},
+      {"儲位":"調1-6","藥代":"IBU","名稱":"ibuprofen 400mg"},
+      {"儲位":"調1-6","藥代":"ACE","名稱":"acetaminophen 500mg"},
+      {"儲位":"調1-6","藥代":"KAS","名稱":"kascoal 40mg"},
+      {"儲位":"調1-6","藥代":"SEC","名稱":"secon"},
+      {"儲位":"散裝區","藥代":"DIP","名稱":"diphenhydramine 30mg"},
+      {"儲位":"散裝區","藥代":"CYP","名稱":"cyproheptadine 4mg"},
+      {"儲位":"散裝區","藥代":"CHL","名稱":"chlorpheniramine 4mg"},
+      {"儲位":"散裝區","藥代":"HYD","名稱":"hydroxyzine 25mg"},
+      {"儲位":"散裝區","藥代":"DOX","名稱":"doxepin 25mg"},
+      {"儲位":"散裝區","藥代":"DEP","名稱":"depo"},
+      {"儲位":"散裝區","藥代":"COL","名稱":"colchicine 0.5mg"},
+      {"儲位":"散裝區","藥代":"ISO","名稱":"isotretinoin 20mg"},
+      {"儲位":"散裝區","藥代":"PRO","名稱":"propranolol 10mg"},
+      {"儲位":"散裝區","藥代":"IND","名稱":"indomethacin 25mg"},
+      {"儲位":"散裝區","藥代":"SUL","名稱":"sulfamethoxazole+trimethoprim"},
+      {"儲位":"散裝區","藥代":"CYS","名稱":"L-cysteine 80mg"},
+      {"儲位":"散裝區","藥代":"CYC","名稱":"cycloserine 250mg"},
+      {"儲位":"散裝區","藥代":"BET","名稱":"betamethasone+dexchlorpheniramine"},
+      {"儲位":"散裝區","藥代":"ASC","名稱":"ascorbic acid 100mg"},
+      {"儲位":"散裝區","藥代":"L-C","名稱":"L-carnitine 330mg"},
+      {"儲位":"調2-1","藥代":"KEF","名稱":"cephalexin 500mg"},
+      {"儲位":"調2-1","藥代":"AMP","名稱":"ampicillin 500mg"},
+      {"儲位":"調2-1","藥代":"AMO","名稱":"amoxicillin 500mg"},
+      {"儲位":"調2-1","藥代":"AUG","名稱":"amoxicillin+clavulanate 1000mg"},
+      {"儲位":"調2-1","藥代":"CEF","名稱":"cefditoren pivoxil 100mg"},
+      {"儲位":"調2-1","藥代":"DOC","名稱":"doxycycline 100mg"},
+      {"儲位":"調2-3","藥代":"MIN","名稱":"minocycline 100mg"},
+      {"儲位":"調2-3","藥代":"ERY","名稱":"erythromycin 250mg"},
+      {"儲位":"調2-3","藥代":"CLA","名稱":"clarithromycin 500mg"},
+      {"儲位":"調2-3","藥代":"CRA","名稱":"craxacin 250mg"},
+      {"儲位":"調2-3","藥代":"BAK","名稱":"baktar 480mg"},
+      {"儲位":"調2-2","藥代":"DIC","名稱":"dicloxacillin 250mg"},
+      {"儲位":"調2-4","藥代":"CIP","名稱":"ciprofloxacin 500mg"},
+      {"儲位":"調2-4","藥代":"LEF","名稱":"levofloxacin 500mg"},
+      {"儲位":"調2-4","藥代":"SPA","名稱":"sparfloxacin 200mg"},
+      {"儲位":"調2-4","藥代":"MOX","名稱":"moxifloxacin 400mg"},
+      {"儲位":"調2-4","藥代":"NOR","名稱":"norfloxacin 400mg"},
+      {"儲位":"櫃1-5","藥代":"AA01","名稱":"clobetasol propionate cream倍達舒乳膏"},
+      {"儲位":"櫃1-5","藥代":"AA02","名稱":"diflucortolone valerate cream狄弗可乳膏"},
+      {"儲位":"櫃1-5","藥代":"AA03","名稱":"betamethasone dipropionate cream貝他每松乳膏"},
+      {"儲位":"櫃1-5","藥代":"AA04","名稱":"mometasone furoate cream莫美他松乳膏"},
+      {"儲位":"櫃1-5","藥代":"AA05","名稱":"fluocinonide cream膚欣乳膏"},
+      {"儲位":"櫃1-5","藥代":"AA06","名稱":"hydrocortisone butyrate cream普樂治乳膏"},
+      {"儲位":"櫃1-5","藥代":"AA07","名稱":"triamcinolone acetonide cream特安皮質乳膏"},
+      {"儲位":"櫃1-5","藥代":"AA08","名稱":"desonide lotion帝舒寧水性洗劑"},
+      {"儲位":"櫃1-5","藥代":"AA09","名稱":"prednisolone valerate acetate cream普麗膚乳膏"},
+      {"儲位":"櫃1-5","藥代":"AA10","名稱":"hydrocortisone acetate cream可的松乳膏"},
+      {"儲位":"櫃1-1","藥代":"AA11","名稱":"clobetasol propionate scalp solution倍達舒頭皮洗劑"},
+      {"儲位":"櫃1-1","藥代":"AA12","名稱":"betamethasone valerate scalp lotion貝他每松洗髮乳"},
+      {"儲位":"櫃1-1","藥代":"AA13","名稱":"fusidic acid cream夫西地酸乳膏"},
+      {"儲位":"櫃1-1","藥代":"AA14","名稱":"mupirocin ointment莫匹羅星軟膏"},
+      {"儲位":"櫃1-1","藥代":"AA15","名稱":"gentamicin sulfate cream慶大黴素乳膏"},
+      {"儲位":"櫃1-1","藥代":"AA16","名稱":"neomycin sulfate cream新黴素乳膏"},
+      {"儲位":"櫃1-1","藥代":"AA17","名稱":"clindamycin phosphate gel克林黴素凝膠"},
+      {"儲位":"櫃1-1","藥代":"AA18","名稱":"erythromycin gel紅黴素凝膠"},
+      {"儲位":"櫃1-1","藥代":"AA19","名稱":"metronidazole gel甲硝唑凝膠"},
+      {"儲位":"櫃1-1","藥代":"AA20","名稱":"silver sulfadiazine cream磺胺嘧啶銀乳膏"},
+      {"儲位":"調3-4","藥代":"AA21","名稱":"terbinafine HCl cream特比萘芬乳膏"},
+      {"儲位":"調3-4","藥代":"AA22","名稱":"ketoconazole cream酮康唑乳膏"},
+      {"儲位":"調3-4","藥代":"AA23","名稱":"clotrimazole cream克黴唑乳膏"},
+      {"儲位":"調3-4","藥代":"AA24","名稱":"miconazole nitrate cream硝酸咪康唑乳膏"},
+      {"儲位":"調3-4","藥代":"AA25","名稱":"econazole nitrate cream益康唑乳膏"},
+      {"儲位":"調3-4","藥代":"AA26","名稱":"bifonazole gel聯苯苄唑凝膠"},
+      {"儲位":"調3-4","藥代":"AA27","名稱":"amorolfine nail lacquer阿莫羅芬擦劑"},
+      {"儲位":"調3-4","藥代":"AA28","名稱":"ciclopirox olamine lotion環吡酮胺洗劑"},
+      {"儲位":"調3-4","藥代":"AA29","名稱":"nystatin ointment制黴菌素軟膏"},
+      {"儲位":"調3-4","藥代":"AA30","名稱":"acyclovir cream阿昔洛韋乳膏"},
+      {"儲位":"調3-5","藥代":"AA31","名稱":"tacrolimus ointment普特皮軟膏"},
+      {"儲位":"調3-5","藥代":"AA32","名稱":"pimecrolimus cream醫立妥乳膏"},
+      {"儲位":"調3-5","藥代":"AA33","名稱":"crisaborole ointment舒坦良軟膏"},
+      {"儲位":"調3-5","藥代":"AA34","名稱":"calcipotriol ointment得膚寧軟膏"},
+      {"儲位":"調3-5","藥代":"AA35","名稱":"calcipotriol+betamethasone gel得膚寶凝膠"},
+      {"儲位":"調3-5","藥代":"AA36","名稱":"tretinoin cream蕾婷乳膏"},
+      {"儲位":"調3-5","藥代":"AA37","名稱":"adapalene gel痘痘凝膠"},
+      {"儲位":"調3-5","藥代":"AA38","名稱":"adapalene+benzoyl peroxide gel諦膚理凝膠"},
+      {"儲位":"調3-5","藥代":"AA39","名稱":"azelaic acid cream思麗安乳膏"},
+      {"儲位":"調3-5","藥代":"AA40","名稱":"benzoyl peroxide gel過氧化苯甲酰凝膠"},
+      {"儲位":"調3-6","藥代":"AA41","名稱":"permethrin cream百滅寧乳膏"},
+      {"儲位":"調3-6","藥代":"AA42","名稱":"crotamiton cream優力克乳膏"},
+      {"儲位":"調3-6","藥代":"AA43","名稱":"salicylic acid ointment水楊酸軟膏"},
+      {"儲位":"調3-6","藥代":"AA44","名稱":"urea cream尿素乳膏"},
+      {"儲位":"調3-6","藥代":"AA45","名稱":"zinc oxide paste氧化鋅糊劑"},
+      {"儲位":"調3-6","藥代":"AA46","名稱":"calamine lotion痱子水"},
+      {"儲位":"調3-6","藥代":"AA47","名稱":"minoxidil solution落建生髮水"},
+      {"儲位":"調3-6","藥代":"AA48","名稱":"podophyllotoxin tincture汰疣凝乳膏"},
+      {"儲位":"調3-6","藥代":"AA49","名稱":"imiquimod cream樂得美乳膏"},
+      {"儲位":"調3-6","藥代":"AA50","名稱":"fluorouracil cream氟尿嘧啶乳膏"},
+      {"儲位":"調4-1","藥代":"AA51","名稱":"petrolatum white white vaseline白凡士林"},
+      {"儲位":"調4-2","藥代":"FLC","名稱":"fluconazole 50mg"},
+      {"儲位":"調4-2","藥代":"ITR","名稱":"itraconazole 100mg"},
+      {"儲位":"調4-2","藥代":"TER","名稱":"terbinafine 250mg"},
+      {"儲位":"調4-2","藥代":"GRI","名稱":"griseofulvin 500mg"},
+      {"儲位":"調4-2","藥代":"ACY","名稱":"acyclovir 400mg"},
+      {"儲位":"調4-2","藥代":"VAL","名稱":"valacyclovir 500mg"},
+      {"儲位":"調4-2","藥代":"PRE","名稱":"pregabalin 75mg"},
+      {"儲位":"調4-2","藥代":"GAB","名稱":"gabapentin 300mg"},
+      {"儲位":"調4-2","藥代":"COL2","名稱":"colchicine 0.5mg"},
+      {"儲位":"調4-2","藥代":"ALL","名稱":"allopurinol 100mg"},
+      {"儲位":"調4-2","藥代":"FEB","名稱":"febuxostat 80mg"},
+      {"儲位":"調4-2","藥代":"BEN","名稱":"benzbromarone 50mg"},
+      {"儲位":"調4-2","藥代":"MET","名稱":"methotrexate 2.5mg"},
+      {"儲位":"桌面右","藥代":"AA52","名稱":"sinpharderm DE cream杏化潤愛麗霜乳膏"},
+      {"儲位":"桌面右","藥代":"AA53","名稱":"U soft cream優倍滋乳膏"},
+      {"儲位":"調1-3(左)(原箱內)","藥代":"AA42","名稱":"silva sulfa 1% cream銀磺胺乳膏"},
+      {"儲位":"櫃1-4","藥代":"PRO","名稱":"prosela泰達利"},
+      {"儲位":"調3-4","藥代":"FIN","名稱":"finjuve紛永維噴液"}
+    ];
+
+    const searchInput = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearBtn');
+    const micBtn = document.getElementById('micBtn');
+    const speechStatus = document.getElementById('speechStatus');
+    const cardList = document.getElementById('cardList');
+    const resultCount = document.getElementById('resultCount');
+
+    function renderList(items) {
+      cardList.innerHTML = '';
+      resultCount.textContent = `搜尋結果：${items.length} 筆`;
+
+      if (items.length === 0) {
+        cardList.innerHTML = `
+          <div class="empty-state">
+            <p>查無對應藥品或儲位</p>
+          </div>`;
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      items.forEach(item => {
+        const shelf = item['儲位'] || '';
+        let cardTypeClass = '';
+        let badgeTypeClass = '';
+
+        if (shelf.includes('桌面')) {
+          cardTypeClass = 'shelf-desk';
+          badgeTypeClass = 'desk-badge';
+        } else if (shelf.includes('櫃')) {
+          cardTypeClass = 'shelf-cabinet';
+          badgeTypeClass = 'cabinet-badge';
+        } else if (shelf.includes('散裝')) {
+          cardTypeClass = 'shelf-bulk';
+          badgeTypeClass = 'bulk-badge';
+        }
+
+        const card = document.createElement('div');
+        card.className = `card ${cardTypeClass}`;
+
+        card.innerHTML = `
+          <div class="card-top">
+            <span class="shelf-badge ${badgeTypeClass}">${shelf}</span>
+            <div class="code-tags">
+              ${item['藥代'] ? `<span class="tag-med">代碼:${item['藥代']}</span>` : ''}
+            </div>
+          </div>
+          <div class="drug-name-main">${item['名稱']}</div>
+        `;
+        fragment.appendChild(card);
+      });
+      cardList.appendChild(fragment);
+    }
+
+    function doSearch(keyword) {
+      const q = keyword.trim().toLowerCase();
+      if (!q) {
+        renderList(DRUG_DATA);
+        clearBtn.style.display = 'none';
+        return;
+      }
+      clearBtn.style.display = 'block';
+
+      const qNorm = q.replace(/o/g, '0');
+
+      const results = DRUG_DATA.filter(item => {
+        const shelf = (item['儲位'] || '').toLowerCase();
+        const code = (item['藥代'] || '').toLowerCase();
+        const codeNorm = code.replace(/o/g, '0');
+        const name = (item['名稱'] || '').toLowerCase();
+
+        return shelf.includes(q) ||
+               code.includes(q) ||
+               codeNorm.includes(qNorm) ||
+               name.includes(q);
+      });
+
+      renderList(results);
+    }
+
+    searchInput.addEventListener('input', (e) => doSearch(e.target.value));
+
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      doSearch('');
+      searchInput.focus();
+    });
+
+    // 語音辨識 Web Speech API (zh-TW)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'zh-TW';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      let isListening = false;
+
+      micBtn.addEventListener('click', () => {
+        if (isListening) {
+          recognition.stop();
+          return;
+        }
+        try {
+          recognition.start();
+        } catch(err) {
+          console.error(err);
+        }
+      });
+
+      recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.add('listening');
+        speechStatus.textContent = '正在聆聽中，請說藥品名稱或藥代...';
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        speechStatus.textContent = `辨識結果: "${transcript}"`;
+        searchInput.value = transcript;
+        doSearch(transcript);
+      };
+
+      recognition.onerror = () => {
+        speechStatus.textContent = '未偵測到聲音或被中斷';
+        isListening = false;
+        micBtn.classList.remove('listening');
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        setTimeout(() => { speechStatus.textContent = ''; }, 3000);
+      };
+    } else {
+      micBtn.addEventListener('click', () => {
+        alert('您的瀏覽器不支援原生語音辨識，請使用 Chrome 或 Safari 開啟。');
+      });
+    }
+
+    renderList(DRUG_DATA);
+  </script>
+</body>
+</html>
